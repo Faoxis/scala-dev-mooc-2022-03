@@ -1,5 +1,7 @@
 package collections
 
+import java.util.stream.Collectors
+
 object task_collections {
 
   def isASCIIString(str: String): Boolean = str.matches("[A-Za-z]+")
@@ -16,7 +18,11 @@ object task_collections {
    *
    * **/
   def capitalizeIgnoringASCII(text: List[String]): List[String] = {
-    List.empty
+    text.zipWithIndex.collect {
+      case (x, 0) => x
+      case (x, _) if isASCIIString(x) => x.toUpperCase()
+      case (x, _) => x.toLowerCase()
+    }
   }
 
   /**
@@ -29,7 +35,28 @@ object task_collections {
    * HINT: Для всех возможных комбинаций чисел стоит использовать Map
    * **/
   def numbersToNumericString(text: String): String = {
-    ""
+    text.toArray
+      .map { x => x.makeReadableNumbers() }
+      .mkString
+  }
+
+
+  implicit class CharToReadableNumbers(x: Char) {
+    def makeReadableNumbers(): String = {
+      x match {
+        case '0' => "zero"
+        case '1' => "one"
+        case '2' => "two"
+        case '3' => "three"
+        case '4' => "four"
+        case '5' => "five"
+        case '6' => "six"
+        case '7' => "seven"
+        case '8' => "eight"
+        case '9' => "nine"
+        case x => x.toString
+      }
+    }
   }
 
   /**
@@ -39,7 +66,6 @@ object task_collections {
    * HINT: Set
    * HINT2: Iterable стоит изменить
    * **/
-
   case class Auto(mark: String, model: String)
 
   /**
@@ -47,7 +73,11 @@ object task_collections {
    * Реализуйте метод который примет две коллекции (два источника) и вернёт объединенный список уникальный значений
    **/
   def intersectionAuto(dealerOne: Iterable[Auto], dealerTwo: Iterable[Auto]): Iterable[Auto] = {
-    Iterable.empty
+    dealerOne.toSet.filter { autoFromFirstDealer =>
+      dealerTwo.exists { autoFromSecondDealer =>
+        autoFromFirstDealer == autoFromSecondDealer
+      }
+    }
   }
 
   /**
@@ -56,6 +86,10 @@ object task_collections {
    * и вернёт уникальный список машин обслуживающихся в первом дилерском центре и не обслуживающимся во втором
    **/
   def filterAllLeftDealerAutoWithoutRight(dealerOne: Iterable[Auto], dealerTwo: Iterable[Auto]): Iterable[Auto] = {
-    Iterable.empty
+    dealerOne.toSet.filter { autoFromFirstDealer =>
+      !dealerTwo.exists { autoFromSecondDealer =>
+        autoFromFirstDealer == autoFromSecondDealer
+      }
+    }
   }
 }

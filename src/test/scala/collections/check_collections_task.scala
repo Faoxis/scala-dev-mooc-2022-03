@@ -8,11 +8,13 @@ class check_collections_task extends AnyFlatSpec {
   "check capitalizeIgnoringASCII" should "ok" in  {
     assert(capitalizeIgnoringASCII(List("Lorem", "ipsum", "dolor", "sit", "amet")) == List("Lorem", "IPSUM", "DOLOR", "SIT", "AMET"))
     assert(capitalizeIgnoringASCII(List("Оказывается", ",", "ЗвУк", "КЛАВИШЬ")) === List("Оказывается", ",", "звук", "клавишь"))
+    assert(capitalizeIgnoringASCII(List("Оказывается")) === List("Оказывается"))
+    assert(capitalizeIgnoringASCII(List()) === List())
   }
 
   "check numbersToNumericString" should "ok" in {
     val text = "Hello. I am 9 years old"
-    val transformText = "Hello. I am ten years old"
+    val transformText = "Hello. I am nine years old" // опечатка?
     assert(numbersToNumericString(text) === transformText)
     assert(numbersToNumericString("") === "")
     assert(numbersToNumericString("4") === "four")
