@@ -2,7 +2,11 @@ package futures
 
 import HomeworksUtils.TaskSyntax
 
-import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.CountDownLatch
+import scala.::
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 object task_futures_sequence {
 
@@ -20,6 +24,21 @@ object task_futures_sequence {
    * @return асинхронную задачу с кортежом из двух списков
    */
   def fullSequence[A](futures: List[Future[A]])
-                     (implicit ex: ExecutionContext): Future[(List[A], List[Throwable])] =
-    task"Реализуйте метод `fullSequence`"()
+                     (implicit ex: ExecutionContext): Future[(List[A], List[Throwable])] = {
+    Future {
+      val latch = new CountDownLatch(futures.size)
+      val blockedFutures = futures
+        .map(future => {
+          future.transform(x => { latch.countDown(); x }, e => { latch.countDown(); e})
+        })
+      latch.await()
+
+      blockedFutures.foldLeft[(List[A], List[Throwable])](List(), List()) { (results, future) =>
+        future.value.get match {
+          case Success(value) => (results._1 :+ value, results._2)
+          case Failure(e) => (results._1, results._2 :+ e)
+        }
+      }
+    }
+  }
 }
