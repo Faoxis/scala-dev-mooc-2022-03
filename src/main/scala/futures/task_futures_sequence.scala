@@ -25,20 +25,10 @@ object task_futures_sequence {
    */
   def fullSequence[A](futures: List[Future[A]])
                      (implicit ex: ExecutionContext): Future[(List[A], List[Throwable])] = {
-    Future {
-      val latch = new CountDownLatch(futures.size)
-      val blockedFutures = futures
-        .map(future => {
-          future.transform(x => { latch.countDown(); x }, e => { latch.countDown(); e})
-        })
-      latch.await()
-
-      blockedFutures.foldLeft[(List[A], List[Throwable])](List(), List()) { (results, future) =>
-        future.value.get match {
-          case Success(value) => (results._1 :+ value, results._2)
-          case Failure(e) => (results._1, results._2 :+ e)
-        }
-      }
+    Future.traverse(futures)(f => f.transform(Success.apply)).map { trys =>
+      val as = trys.collect { case Success(a) => a }
+      val errs = trys.collect { case Failure(err) => err }
+      as -> errs
     }
   }
 }
