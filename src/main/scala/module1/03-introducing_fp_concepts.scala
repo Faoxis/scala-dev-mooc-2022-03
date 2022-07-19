@@ -2,7 +2,6 @@ package module1
 
 import java.util.UUID
 import scala.annotation.tailrec
-import java.time.Instant
 import scala.language.postfixOps
 
 
@@ -220,6 +219,11 @@ object hof{
         case Option.Some(v) => f(v)
         case Option.None => Option.None
       }
+
+      def forEach(f: T => Unit): Unit = this match {
+        case Option.Some(v) => f(v)
+        case Option.None => { }
+      }
    }
 
    object Option{
@@ -230,25 +234,40 @@ object hof{
    }
 
 
-  /**
-   *
-   * Реализовать метод printIfAny, который будет печатать значение, если оно есть
-   */
 
+  implicit class OptionExtensions[T](val option: Option[T]) {
+    /**
+     *
+     * Реализовать метод printIfAny, который будет печатать значение, если оно есть
+     */
+    def printIfAny(): Unit = option match {
+      case Option.Some(v) => println(v)
+      case Option.None => { }
+    }
 
-  /**
-   *
-   * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
-   */
+    /**
+     *
+     * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
+     */
+    def zip[V](zipOption: Option[V]): Option[(T, V)] = {
+      for {
+        v1 <- option
+        v2 <- zipOption
+      } yield (v1, v2)
+    }
 
+    /**
+     *
+     * Реализовать метод filter, который будет возвращать не пустой Option
+     * в случае если исходный не пуст и предикат от значения = true
+     */
+    def filter(predicate: T => Boolean): Option[T] = option match {
+      case Option.Some(v) if predicate(v) => option
+      case _ => Option.None
+    }
+  }
 
-  /**
-   *
-   * Реализовать метод filter, который будет возвращать не пустой Option
-   * в случае если исходный не пуст и предикат от значения = true
-   */
-
- }
+}
 
  object list {
    /**
@@ -258,61 +277,122 @@ object hof{
     * Nil - пустой список
     * Cons - непустой, содердит первый элемент (голову) и хвост (оставшийся список)
     */
+   sealed trait List[+T] {
 
-    sealed trait List[+T]{
-     def ::[A >: T](elem: A): List[A] = ???
-   }
+     def headOption: Option[T] = this match {
+       case List.::(head, _) => Option(head)
+       case List.Nil => Option.empty
+     }
 
-   object List{
-     case class ::[A](head: A, tail: List[A]) extends List[A]
-     case object Nil extends List[Nothing]
-   }
+     /**
+      * Метод cons, добавляет элемент в голову списка, для этого метода можно воспользоваться названием `::`
+      *
+      */
+     def ::[A >: T](elem: A): List[A] = List.::(elem, this)
 
-   /**
-     * Метод cons, добавляет элемент в голову списка, для этого метода можно воспользоваться названием `::`
-     *
-     */
-
-    /**
+     /**
       * Метод mkString возвращает строковое представление списка, с учетом переданного разделителя
       *
       */
+     def mkString(separator: String = " "): String = {
+       @tailrec
+       def mkStringRec(acc: String, list: List[T], separator: String): String = {
+         list match {
+           case List.Nil => ""
+           case List.::(head, List.Nil) => s"$acc$head"
+           case List.::(head, tail) => mkStringRec(s"$acc$head$separator", tail, separator)
+         }
+       }
+       mkStringRec("", this, separator)
+     }
 
-    /**
-      * Конструктор, позволяющий создать список из N - го числа аргументов
-      * Для этого можно воспользоваться *
-      * 
-      * Например вот этот метод принимает некую последовательность аргументов с типом Int и выводит их на печать
-      * def printArgs(args: Int*) = args.foreach(println(_))
-      */
-
-    /**
+     /**
       *
       * Реализовать метод reverse который позволит заменить порядок элементов в списке на противоположный
       */
+     def reverse(): List[T] = {
+       @tailrec
+       def reverse(list: List[T], acc: List[T]): List[T] = {
+         list match {
+           case List.Nil => acc
+           case List.::(head, tail) => reverse(tail, List.::(head, acc))
+         }
+       }
+       reverse(this, List.Nil)
+     }
 
-    /**
+     /**
       *
       * Реализовать метод map для списка который будет применять некую ф-цию к элементам данного списка
       */
+     def map[D](f: T => D): List[D] = {
+       @tailrec
+       def map(list: List[T], acc: List[D]): List[D] = {
+         list match {
+           case List.Nil => acc
+           case List.::(head, tail) => map(tail, f(head) :: acc)
+         }
+       }
+       // Аналогично с apply
+       // Не могу придумать как простой хвостовой рекурсией справится без reverse
+       map(this, List.Nil).reverse()
+     }
 
-
-    /**
-      *
+     /**
       * Реализовать метод filter для списка который будет фильтровать список по некому условию
       */
+     def filter(f: (T => Boolean)): List[T] = {
+       @tailrec
+       def filter(list: List[T], acc: List[T]): List[T] = {
+         list match {
+           case List.Nil => acc
+           case List.::(head, tail) =>
+             if (f(head)) filter(tail, head :: acc)
+             else filter(tail, acc)
+         }
+       }
+       filter(this, List.Nil).reverse()
+     }
+
+
+   }
+
+   object List {
+     case class ::[A](head: A, tail: List[A]) extends List[A]
+     case object Nil extends List[Nothing]
+
+     /**
+      * Конструктор, позволяющий создать список из N - го числа аргументов
+      * Для этого можно воспользоваться *
+      *
+      * Например вот этот метод принимает некую последовательность аргументов с типом Int и выводит их на печать
+      * def printArgs(args: Int*) = args.foreach(println(_))
+      */
+     def apply[A](elements: A*): List[A] = {
+        @tailrec
+        def applyRec(acc: List[A], elements: A*): List[A] = {
+          if (elements.isEmpty) acc
+          else applyRec(List.::(elements.head, acc), elements.tail: _*)
+        }
+        // Здесь идет reverse, чтобы список работал как стандартный List
+        // Интересно, можно ли сделать это более эффективно без reverse в лямбде
+        applyRec(Nil, elements: _*).reverse()
+     }
+   }
+
 
     /**
       *
       * Написать функцию incList котрая будет принимать список Int и возвращать список,
       * где каждый элемент будет увеличен на 1
       */
-
+    def incList(list: List[Int]): List[Int] = list.map(_ + 1)
 
     /**
       *
       * Написать функцию shoutString котрая будет принимать список String и возвращать список,
       * где к каждому элементу будет добавлен префикс в виде '!'
       */
+    def shoutString(list: List[String]): List[String] = list.map(_ + "!")
 
  }
